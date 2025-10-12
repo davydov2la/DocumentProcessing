@@ -1,0 +1,31 @@
+# === IDE files ===
+.idea/
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# === Build results ===
+[Bb]in/
+[Oo]bj/
+artifacts/
+*.nupkg
+*.snupkg
+*.dll
+*.exe
+*.pdb
+
+# === OS-specific ===
+.DS_Store
+Thumbs.db
+
+# === Logs ===
+*.log
+
+# === Temporary ===
+temp/
+TestResults/
+
+# === Test Folder ===
+ProcessingTest/
