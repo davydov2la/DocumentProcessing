@@ -129,7 +129,7 @@ namespace DocumentProcessingConsole
     
             if (files.Length == 0)
             {
-                Console.WriteLine("❌ Файлы не найдены в директории: " + inputDirectory);
+                Console.WriteLine("Файлы не найдены в директории: " + inputDirectory);
                 return;
             }
     
@@ -221,20 +221,20 @@ namespace DocumentProcessingConsole
     
                             if (extractedCodes.Count > 0)
                             {
-                                Console.WriteLine($"  Извлечено кодов: {extractedCodes.Count}");
+                                Console.WriteLine($"Извлечено кодов: {extractedCodes.Count}");
                             }
                         }
                         else
                         {
                             Console.ForegroundColor = ConsoleColor.Red;
-                            Console.WriteLine($"✗ Ошибка: {string.Join(", ", result.Errors)}");
+                            Console.WriteLine($"Ошибка: {string.Join(", ", result.Errors)}");
                             Console.ResetColor();
                         }
     
                         if (result.Warnings.Any())
                         {
                             Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"⚠ Предупреждений: {result.Warnings.Count}");
+                            Console.WriteLine($"Предупреждений: {result.Warnings.Count}");
                             Console.ResetColor();
                         }
                     }
@@ -244,7 +244,7 @@ namespace DocumentProcessingConsole
                         fileResult.Errors.Add(ex.Message);
     
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"✗ Исключение: {ex.Message}");
+                        Console.WriteLine($"Исключение: {ex.Message}");
                         Console.ResetColor();
                     }
     
@@ -261,28 +261,28 @@ namespace DocumentProcessingConsole
                 var totalCodes = batchResults.Sum(r => r.ExtractedCodes);
                 var totalCodesRemoved = batchResults.Sum(r => r.CodesRemoved);
     
-                Console.WriteLine($"📊 Статистика:");
-                Console.WriteLine($"   Всего файлов: {files.Length}");
-                Console.WriteLine($"   Успешно: {successful}");
-                Console.WriteLine($"   Ошибок: {failed}");
-                Console.WriteLine($"   Всего найдено совпадений: {totalMatches}");
-                Console.WriteLine($"   Всего обработано: {totalProcessed}");
-                Console.WriteLine($"   Извлечено кодов: {totalCodes}");
-                Console.WriteLine($"   Удалено отдельных кодов: {totalCodesRemoved}\n");
+                Console.WriteLine($"Статистика:");
+                Console.WriteLine($"Всего файлов: {files.Length}");
+                Console.WriteLine($"Успешно: {successful}");
+                Console.WriteLine($"Ошибок: {failed}");
+                Console.WriteLine($"Всего найдено совпадений: {totalMatches}");
+                Console.WriteLine($"Всего обработано: {totalProcessed}");
+                Console.WriteLine($"Извлечено кодов: {totalCodes}");
+                Console.WriteLine($"Удалено отдельных кодов: {totalCodesRemoved}\n");
     
-                Console.WriteLine("📁 Детали по файлам:");
+                Console.WriteLine("Детали по файлам:");
                 foreach (var fileResult in batchResults)
                 {
                     if (fileResult.Success)
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
-                        Console.Write("✓ ");
+                        Console.Write("OK");
                         Console.ResetColor();
                     }
                     else
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.Write("✗ ");
+                        Console.Write("Not OK");
                         Console.ResetColor();
                     }
     
@@ -291,19 +291,19 @@ namespace DocumentProcessingConsole
                     if (fileResult.Warnings.Any())
                     {
                         Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"     ⚠ {fileResult.Warnings.Count} предупреждений");
+                        Console.WriteLine($"{fileResult.Warnings.Count} предупреждений");
                         Console.ResetColor();
                     }
     
                     if (fileResult.Errors.Any())
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"     ✗ {string.Join(", ", fileResult.Errors)}");
+                        Console.WriteLine($"Ошибки: {string.Join(", ", fileResult.Errors)}");
                         Console.ResetColor();
                     }
                 }
     
-                Console.WriteLine($"\n📂 Результаты сохранены в: {outputDirectory}");
+                Console.WriteLine($"\nРезультаты сохранены в: {outputDirectory}");
             }
     
             Console.WriteLine("\n=== ПАКЕТНАЯ ОБРАБОТКА ЗАВЕРШЕНА ===");
@@ -335,8 +335,8 @@ namespace DocumentProcessingConsole
             var logger = serviceProvider.GetRequiredService<ILogger<DocumentAnonymizer>>();
 
             Console.WriteLine("Шаг 0: Логгирование настроено");
-            Console.WriteLine("  ✓ Console logger активирован");
-            Console.WriteLine("  ✓ Уровень: Debug\n");
+            Console.WriteLine("Console logger активирован");
+            Console.WriteLine("Уровень: Debug\n");
 
             // ========================================================================
             // ШАГ 1: Создаем стратегии поиска
@@ -368,8 +368,8 @@ namespace DocumentProcessingConsole
             var nameRemovalStrategy = new RemoveReplacementStrategy();
 
             Console.WriteLine("Шаг 1: Стратегии поиска созданы");
-            Console.WriteLine("  ✓ Обозначения (3 паттерна)");
-            Console.WriteLine("  ✓ Имена (2 паттерна)\n");
+            Console.WriteLine("Обозначения (3 паттерна)");
+            Console.WriteLine("Имена (2 паттерна)\n");
 
             // ========================================================================
             // ШАГ 2: Конфигурация ПЕРВОГО ПРОХОДА
@@ -402,8 +402,8 @@ namespace DocumentProcessingConsole
             };
 
             Console.WriteLine("Шаг 2: Конфигурация первого прохода");
-            Console.WriteLine("  ✓ Композитная стратегия замены");
-            Console.WriteLine("  ✓ Логгер подключен\n");
+            Console.WriteLine("Композитная стратегия замены");
+            Console.WriteLine("Логгер подключен\n");
 
             // ========================================================================
             // ШАГ 3: Конфигурация ВТОРОГО ПРОХОДА
@@ -423,7 +423,7 @@ namespace DocumentProcessingConsole
                     MinMatchLength = 1,
                     CaseSensitive = true
                 },
-                Logger = logger // ← ВАЖНО: Подключаем логгер
+                Logger = logger
             };
 
             Console.WriteLine("Шаг 3: Конфигурация второго прохода\n");
@@ -461,9 +461,9 @@ namespace DocumentProcessingConsole
             };
 
             Console.WriteLine("Шаг 5: Запрос создан");
-            Console.WriteLine($"  Входной файл: {Path.GetFileName(inputFile)}");
-            Console.WriteLine($"  Выходная папка: {outputDir}");
-            Console.WriteLine($"  Сохранить оригинал: Да\n");
+            Console.WriteLine($"Входной файл: {Path.GetFileName(inputFile)}");
+            Console.WriteLine($"Выходная папка: {outputDir}");
+            Console.WriteLine($"Сохранить оригинал: Да\n");
 
             // ========================================================================
             // ШАГ 6: ВЫПОЛНЕНИЕ С ИСПОЛЬЗОВАНИЕМ ResultAwareLogger
@@ -510,24 +510,24 @@ namespace DocumentProcessingConsole
                             Console.ResetColor();
                             Console.WriteLine();
 
-                            Console.WriteLine($"📊 Статистика:");
-                            Console.WriteLine($"   Всего найдено совпадений: {result.MatchesFound}");
-                            Console.WriteLine($"   Успешно обработано: {result.MatchesProcessed}");
+                            Console.WriteLine($"Статистика:");
+                            Console.WriteLine($"Всего найдено совпадений: {result.MatchesFound}");
+                            Console.WriteLine($"Успешно обработано: {result.MatchesProcessed}");
 
                             var extractedCodes = codeExtractionStrategy.GetExtractedCodes();
 
-                            Console.WriteLine($"\n🔑 Извлеченные коды организаций ({extractedCodes.Count}):");
+                            Console.WriteLine($"\nИзвлеченные коды организаций ({extractedCodes.Count}):");
                             foreach (var code in extractedCodes)
                             {
-                                Console.WriteLine($"   - {code}");
+                                Console.WriteLine($"- {code}");
                             }
 
                             if (result.Metadata.TryGetValue("CodesRemoved", out var codesRemoved))
                             {
-                                Console.WriteLine($"\n🗑️  Удалено отдельно стоящих кодов: {codesRemoved}");
+                                Console.WriteLine($"\nУдалено отдельно стоящих кодов: {codesRemoved}");
                             }
 
-                            Console.WriteLine($"\n📁 Результаты сохранены в: {outputDir}");
+                            Console.WriteLine($"\nРезультаты сохранены в: {outputDir}");
                         }
                         else
                         {
@@ -536,38 +536,37 @@ namespace DocumentProcessingConsole
                             Console.ResetColor();
                             Console.WriteLine();
 
-                            Console.WriteLine("❌ Ошибки:");
+                            Console.WriteLine("Ошибки:");
                             foreach (var error in result.Errors)
                             {
                                 Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine($"   {error}");
+                                Console.WriteLine($"{error}");
                                 Console.ResetColor();
                             }
                         }
 
-                        // Предупреждения (автоматически собраны через ResultAwareLogger)
                         if (result.Warnings.Any())
                         {
                             Console.ForegroundColor = ConsoleColor.Yellow;
-                            Console.WriteLine($"\n⚠️  Предупреждения ({result.Warnings.Count}):");
+                            Console.WriteLine($"\nПредупреждения ({result.Warnings.Count}):");
                             Console.ResetColor();
                             
                             foreach (var warning in result.Warnings)
                             {
                                 Console.ForegroundColor = ConsoleColor.Yellow;
-                                Console.WriteLine($"   {warning}");
+                                Console.WriteLine($"{warning}");
                                 Console.ResetColor();
                             }
                         }
                     }
                     else
                     {
-                        Console.WriteLine("⚠️  Процессор не поддерживает двухпроходную обработку");
+                        Console.WriteLine("Процессор не поддерживает двухпроходную обработку");
                         result = processor.Process(processingRequest);
 
                         if (result.Success)
                         {
-                            Console.WriteLine($"\n✓ Обработано: {result.MatchesProcessed} совпадений");
+                            Console.WriteLine($"\nОбработано: {result.MatchesProcessed} совпадений");
                         }
                     }
                 }
@@ -583,7 +582,6 @@ namespace DocumentProcessingConsole
         {
             Console.WriteLine("=== УПРОЩЕННЫЙ ВАРИАНТ (через фасад) ===\n");
 
-            // Настройка логгирования
             var services = new ServiceCollection();
             services.AddLogging(builder =>
             {
@@ -599,7 +597,6 @@ namespace DocumentProcessingConsole
                 useOpenXml: true,
                 logger: logger))
             {
-                // Все настроено автоматически!
                 var result = anonymizer.AnonymizeDocumentWithCodeRemoval(
                     inputFilePath: @"/Users/paveldavydov/Documents/Test.docx",
                     outputDirectory: @"/Users/paveldavydov/Documents/Output"
@@ -619,88 +616,9 @@ namespace DocumentProcessingConsole
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"✗ Ошибки: {string.Join(", ", result.Errors)}");
+                    Console.WriteLine($"Ошибки: {string.Join(", ", result.Errors)}");
                     Console.ResetColor();
                 }
-            }
-        }
-
-        /// <summary>
-        /// ПРИМЕР С КАСТОМНЫМИ ПАТТЕРНАМИ + Serilog
-        /// </summary>
-        public static void CustomPatternsWithSerilog()
-        {
-            Console.WriteLine("=== КАСТОМНЫЕ ПАТТЕРНЫ + SERILOG ===\n");
-
-            // Если у вас установлен Serilog:
-            // Install-Package Serilog.Extensions.Logging
-            // Install-Package Serilog.Sinks.Console
-            // Install-Package Serilog.Sinks.File
-
-            /*
-            var serilogLogger = new Serilog.LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .WriteTo.Console()
-                .WriteTo.File("logs/processing-.log", rollingInterval: Serilog.RollingInterval.Day)
-                .CreateLogger();
-
-            var services = new ServiceCollection();
-            services.AddLogging(builder => builder.AddSerilog(serilogLogger));
-            */
-
-            var services = new ServiceCollection();
-            services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Debug));
-
-            var serviceProvider = services.BuildServiceProvider();
-            var logger = serviceProvider.GetRequiredService<ILogger<DocumentAnonymizer>>();
-
-            var customDesignations = new RegexSearchStrategy(
-                "MyDesignations",
-                new RegexPattern("Format1", @"[A-Z]{2,4}\.[0-9]{3,5}"),
-                new RegexPattern("Format2", @"[A-Z]+-[0-9]+\.[0-9]+")
-            );
-
-            var customNames = new RegexSearchStrategy(
-                "MyNames",
-                new RegexPattern("FullName", @"[А-Я][а-я]+ [А-Я][а-я]+ [А-Я][а-я]+"),
-                new RegexPattern("ShortName", @"[А-Я][а-я]+ [А-Я]\. [А-Я]\.")
-            );
-
-            var codeExtractor = new OrganizationCodeRemovalStrategy();
-
-            var config = new ProcessingConfiguration
-            {
-                SearchStrategies = new List<ITextSearchStrategy>
-                {
-                    customDesignations,
-                    customNames
-                },
-                ReplacementStrategy = codeExtractor,
-                Options = new ProcessingOptions
-                {
-                    ProcessProperties = true,
-                    ProcessTextBoxes = true,
-                    ProcessNotes = false,
-                    ProcessHeaders = true,
-                    ProcessFooters = false,
-                    MinMatchLength = 3,
-                    CaseSensitive = false
-                },
-                Logger = logger // ← Подключаем логгер
-            };
-
-            using (var anonymizer = new DocumentAnonymizer(logger: logger))
-            {
-                var result = anonymizer.AnonymizeDocument(
-                    @"/Users/paveldavydov/Documents/Custom.docx",
-                    @"/Users/paveldavydov/Documents/Output",
-                    config
-                );
-
-                Console.WriteLine($"\nРезультат: {(result.Success ? "✓ Успех" : "✗ Ошибка")}");
-                Console.WriteLine($"Обработано: {result.MatchesProcessed}");
-                Console.WriteLine($"Предупреждений: {result.Warnings.Count}");
-                Console.WriteLine($"Ошибок: {result.Errors.Count}");
             }
         }
 
@@ -752,7 +670,7 @@ namespace DocumentProcessingConsole
                     else
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"✗ {fileResult.FileName}: {fileResult.Error}");
+                        Console.WriteLine($"{fileResult.FileName}: {fileResult.Error}");
                         Console.ResetColor();
                     }
                 }
@@ -788,7 +706,7 @@ namespace DocumentProcessingConsole
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\n❌ КРИТИЧЕСКАЯ ОШИБКА: {ex.Message}");
+                Console.WriteLine($"\nКРИТИЧЕСКАЯ ОШИБКА: {ex.Message}");
                 Console.WriteLine($"\nStack trace:\n{ex.StackTrace}");
                 Console.ResetColor();
             }
