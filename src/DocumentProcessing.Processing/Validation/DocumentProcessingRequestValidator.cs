@@ -278,7 +278,6 @@ public class DocumentProcessingRequestValidator
     /// </summary>
     private void ValidateLegacyWordDocument(string filePath)
     {
-        // Базовая проверка - читаем первые байты для проверки сигнатуры
         using var stream = File.OpenRead(filePath);
         var buffer = new byte[8];
         var bytesRead = stream.Read(buffer, 0, buffer.Length);
@@ -291,7 +290,6 @@ public class DocumentProcessingRequestValidator
                 filePath);
         }
 
-        // Проверка сигнатуры OLE2 (D0 CF 11 E0 A1 B1 1A E1)
         if (buffer[0] != 0xD0 || buffer[1] != 0xCF || buffer[2] != 0x11 || buffer[3] != 0xE0)
         {
             throw new DocumentProcessingException(
@@ -306,7 +304,6 @@ public class DocumentProcessingRequestValidator
     /// </summary>
     private void ValidateSolidWorksDocument(string filePath)
     {
-        // Базовая проверка - проверяем, что файл не пустой
         var fileInfo = new FileInfo(filePath);
         if (fileInfo.Length == 0)
         {
@@ -316,7 +313,6 @@ public class DocumentProcessingRequestValidator
                 filePath);
         }
 
-        // SolidWorks файлы также основаны на OLE2, проверим сигнатуру
         using var stream = File.OpenRead(filePath);
         var buffer = new byte[8];
         var bytesRead = stream.Read(buffer, 0, buffer.Length);
