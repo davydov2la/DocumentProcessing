@@ -16,7 +16,7 @@ public class WordOpenXmlDocumentProcessor : ITwoPassDocumentProcessor
 {
     private bool _disposed;
     private readonly ILogger? _logger;
-    
+
     /// <summary>
     /// Имя процессора для идентификации и логирования.
     /// </summary>
@@ -123,6 +123,12 @@ public class WordOpenXmlDocumentProcessor : ITwoPassDocumentProcessor
                 logger?.LogError(ex, "Не удалось удалить временный файл");
             }
         }
+    }
+    
+    public Task<ProcessingResult> ProcessAsync(DocumentProcessingRequest request, IProgress<ProcessingProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
     }
     
     /// <summary>
@@ -233,6 +239,12 @@ public class WordOpenXmlDocumentProcessor : ITwoPassDocumentProcessor
                 logger?.LogError(ex, "Не удалось удалить временный файл");
             }
         }
+    }
+
+    public Task<ProcessingResult> ProcessTwoPassAsync(DocumentProcessingRequest request, TwoPassProcessingConfiguration twoPassConfig,
+        IProgress<ProcessingProgress>? progress = null, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
     }
 
     /// <summary>

@@ -18,6 +18,7 @@ public class SolidWorksDocumentProcessor : IDocumentProcessor
     private SldWorks? _swApp;
     private readonly ILogger? _logger;
     private bool _disposed;
+
     /// <summary>
     /// Имя процессора, используемое для идентификации.
     /// </summary>
@@ -80,6 +81,12 @@ public class SolidWorksDocumentProcessor : IDocumentProcessor
         return extension == ".slddrw"
             ? ProcessDrawing(request)
             : ProcessModel(request);
+    }
+    
+    public Task<ProcessingResult> ProcessAsync(DocumentProcessingRequest request, IProgress<ProcessingProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
     }
 
     private ProcessingResult ProcessDrawing(DocumentProcessingRequest request)

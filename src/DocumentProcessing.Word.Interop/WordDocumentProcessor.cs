@@ -17,7 +17,7 @@ public class WordDocumentProcessor : ITwoPassDocumentProcessor
     private InteropWord.Application? _wordApp;
     private bool _disposed;
     private readonly ILogger? _logger;
-    
+
     /// <summary>
     /// Название процессора документов.
     /// </summary>
@@ -142,6 +142,12 @@ public class WordDocumentProcessor : ITwoPassDocumentProcessor
         }
     }
     
+    public Task<ProcessingResult> ProcessAsync(DocumentProcessingRequest request, IProgress<ProcessingProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
+    }
+    
     /// <summary>
     /// Выполняет двухпроходную обработку документа Word с использованием специальной конфигурации.
     /// </summary>
@@ -245,6 +251,12 @@ public class WordDocumentProcessor : ITwoPassDocumentProcessor
                 Marshal.ReleaseComObject(doc);
             }
         }
+    }
+
+    public Task<ProcessingResult> ProcessTwoPassAsync(DocumentProcessingRequest request, TwoPassProcessingConfiguration twoPassConfig,
+        IProgress<ProcessingProgress>? progress = null, CancellationToken cancellationToken = default)
+    {
+        throw new NotImplementedException();
     }
 
     /// <summary>

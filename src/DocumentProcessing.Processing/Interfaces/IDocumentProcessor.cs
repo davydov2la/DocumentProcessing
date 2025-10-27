@@ -28,6 +28,18 @@ public interface IDocumentProcessor : IDisposable
     ProcessingResult Process(DocumentProcessingRequest request);
 
     /// <summary>
+    /// Асинхронно выполняет обработку документа на основе переданного запроса.
+    /// </summary>
+    /// <param name="request">Запрос на обработку документа, содержащий пути к файлам и конфигурацию.</param>
+    /// <param name="progress">Объект для отчёта о прогрессе обработки.</param>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    /// <returns>Результат обработки в виде <see cref="ProcessingResult"/>.</returns>
+    Task<ProcessingResult> ProcessAsync(
+        DocumentProcessingRequest request, 
+        IProgress<ProcessingProgress>? progress = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Имя процессора документа. Используется для идентификации или логирования.
     /// </summary>
     string ProcessorName { get; }
