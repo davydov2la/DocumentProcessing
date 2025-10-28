@@ -142,10 +142,78 @@ public class WordDocumentProcessor : ITwoPassDocumentProcessor
         }
     }
     
-    public Task<ProcessingResult> ProcessAsync(DocumentProcessingRequest request, IProgress<ProcessingProgress>? progress = null,
+    /// <summary>
+    /// Асинхронная обертка над методом обработки
+    /// </summary>
+    /// <param name="request">Запрос на обработку документа, содержащий пути к файлам и конфигурацию.</param>
+    /// <param name="progress">Объект для отчёта о прогрессе обработки.</param>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    /// <returns>Результат обработки в виде <see cref="ProcessingResult"/>.</returns>
+    public Task<ProcessingResult> ProcessAsync(
+        DocumentProcessingRequest request, 
+        IProgress<ProcessingProgress>? progress = null, 
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return Task.Run(() =>
+        {
+            try
+            {
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 1,
+                    TotalSteps = 4,
+                    CurrentOperation = "Инициализация обработки документа Word",
+                    FileName = Path.GetFileName(request.InputFilePath)
+                });
+    
+                cancellationToken.ThrowIfCancellationRequested();
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 2,
+                    TotalSteps = 4,
+                    CurrentOperation = "Обработка документа Word через COM Interop",
+                    FileName = Path.GetFileName(request.InputFilePath)
+                });
+    
+                var result = Process(request);
+    
+                cancellationToken.ThrowIfCancellationRequested();
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 3,
+                    TotalSteps = 4,
+                    CurrentOperation = "Завершение обработки",
+                    FileName = Path.GetFileName(request.InputFilePath),
+                    MatchesFound = result.MatchesFound,
+                    MatchesProcessed = result.MatchesProcessed
+                });
+    
+                if (!result.Success)
+                {
+                    return result;
+                }
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 4,
+                    TotalSteps = 4,
+                    CurrentOperation = "Обработка завершена успешно",
+                    FileName = Path.GetFileName(request.InputFilePath),
+                    MatchesFound = result.MatchesFound,
+                    MatchesProcessed = result.MatchesProcessed
+                });
+    
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                var logger = request.Configuration.Logger ?? _logger;
+                logger?.LogWarning("Обработка документа Word отменена пользователем");
+                return ProcessingResult.Failed("Обработка отменена", logger);
+            }
+        }, cancellationToken);
     }
     
     /// <summary>
@@ -253,10 +321,80 @@ public class WordDocumentProcessor : ITwoPassDocumentProcessor
         }
     }
 
-    public Task<ProcessingResult> ProcessTwoPassAsync(DocumentProcessingRequest request, TwoPassProcessingConfiguration twoPassConfig,
-        IProgress<ProcessingProgress>? progress = null, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Асинхронная обертка над методом двухпроходной обработки
+    /// </summary>
+    /// <param name="request">Запрос на обработку документа.</param>
+    /// <param name="twoPassConfig">Конфигурация двух проходов, включающая настройки для первого и второго прохода и стратегию извлечения кодов.</param>
+    /// <param name="progress">Объект для отчёта о прогрессе обработки.</param>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    /// <returns>Результат обработки в виде <see cref="ProcessingResult"/>.</returns>
+    public Task<ProcessingResult> ProcessTwoPassAsync(
+        DocumentProcessingRequest request, 
+        TwoPassProcessingConfiguration twoPassConfig, 
+        IProgress<ProcessingProgress>? progress = null, 
+        CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return Task.Run(() =>
+        {
+            try
+            {
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 1,
+                    TotalSteps = 6,
+                    CurrentOperation = "Инициализация двухпроходной обработки Word",
+                    FileName = Path.GetFileName(request.InputFilePath)
+                });
+    
+                cancellationToken.ThrowIfCancellationRequested();
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 2,
+                    TotalSteps = 6,
+                    CurrentOperation = "Первый проход обработки",
+                    FileName = Path.GetFileName(request.InputFilePath)
+                });
+    
+                var result = ProcessTwoPass(request, twoPassConfig);
+    
+                cancellationToken.ThrowIfCancellationRequested();
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 5,
+                    TotalSteps = 6,
+                    CurrentOperation = "Завершение двухпроходной обработки",
+                    FileName = Path.GetFileName(request.InputFilePath),
+                    MatchesFound = result.MatchesFound,
+                    MatchesProcessed = result.MatchesProcessed
+                });
+    
+                if (!result.Success)
+                {
+                    return result;
+                }
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 6,
+                    TotalSteps = 6,
+                    CurrentOperation = "Двухпроходная обработка завершена успешно",
+                    FileName = Path.GetFileName(request.InputFilePath),
+                    MatchesFound = result.MatchesFound,
+                    MatchesProcessed = result.MatchesProcessed
+                });
+    
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                var logger = request.Configuration.Logger ?? _logger;
+                logger?.LogWarning("Двухпроходная обработка документа Word отменена пользователем");
+                return ProcessingResult.Failed("Обработка отменена", logger);
+            }
+        }, cancellationToken);
     }
 
     /// <summary>

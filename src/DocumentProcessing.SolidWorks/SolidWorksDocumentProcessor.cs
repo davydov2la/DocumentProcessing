@@ -83,10 +83,87 @@ public class SolidWorksDocumentProcessor : IDocumentProcessor
             : ProcessModel(request);
     }
     
-    public Task<ProcessingResult> ProcessAsync(DocumentProcessingRequest request, IProgress<ProcessingProgress>? progress = null,
+    /// <summary>
+    /// Асинхронная обертка над методом обработки
+    /// </summary>
+    /// <param name="request">Запрос на обработку документа, содержащий пути к файлам и конфигурацию.</param>
+    /// <param name="progress">Объект для отчёта о прогрессе обработки.</param>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    /// <returns>Результат обработки в виде <see cref="ProcessingResult"/>.</returns>
+    public Task<ProcessingResult> ProcessAsync(
+        DocumentProcessingRequest request, 
+        IProgress<ProcessingProgress>? progress = null, 
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return Task.Run(() =>
+        {
+            try
+            {
+                var logger = request.Configuration.Logger ?? _logger;
+                var extension = Path.GetExtension(request.InputFilePath).ToLowerInvariant();
+                var docType = extension == ".slddrw" ? "чертёж" : extension == ".sldasm" ? "сборка" : "деталь";
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 1,
+                    TotalSteps = 5,
+                    CurrentOperation = $"Инициализация обработки SolidWorks ({docType})",
+                    FileName = Path.GetFileName(request.InputFilePath)
+                });
+    
+                cancellationToken.ThrowIfCancellationRequested();
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 2,
+                    TotalSteps = 5,
+                    CurrentOperation = $"Открытие документа SolidWorks",
+                    FileName = Path.GetFileName(request.InputFilePath)
+                });
+    
+                var result = Process(request);
+    
+                cancellationToken.ThrowIfCancellationRequested();
+    
+                if (!result.Success)
+                {
+                    return result;
+                }
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 4,
+                    TotalSteps = 5,
+                    CurrentOperation = "Сохранение изменений",
+                    FileName = Path.GetFileName(request.InputFilePath),
+                    MatchesFound = result.MatchesFound,
+                    MatchesProcessed = result.MatchesProcessed
+                });
+    
+                cancellationToken.ThrowIfCancellationRequested();
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 5,
+                    TotalSteps = 5,
+                    CurrentOperation = "Обработка SolidWorks завершена",
+                    FileName = Path.GetFileName(request.InputFilePath),
+                    MatchesFound = result.MatchesFound,
+                    MatchesProcessed = result.MatchesProcessed
+                });
+    
+                logger?.LogInformation("Асинхронная обработка SolidWorks завершена: найдено {Found}, обработано {Processed}",
+                    result.MatchesFound, result.MatchesProcessed);
+    
+                return result;
+            }
+            catch (OperationCanceledException)
+            {
+                var logger = request.Configuration.Logger ?? _logger;
+                logger?.LogWarning("Обработка документа SolidWorks отменена пользователем");
+                return ProcessingResult.Failed("Обработка отменена", logger);
+            }
+        }, cancellationToken);
     }
 
     private ProcessingResult ProcessDrawing(DocumentProcessingRequest request)

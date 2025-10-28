@@ -125,10 +125,148 @@ public class WordOpenXmlDocumentProcessor : ITwoPassDocumentProcessor
         }
     }
     
-    public Task<ProcessingResult> ProcessAsync(DocumentProcessingRequest request, IProgress<ProcessingProgress>? progress = null,
+    /// <summary>
+    /// Асинхронная версия обработки
+    /// </summary>
+    /// <param name="request">Запрос на обработку документа, содержащий пути к файлам и конфигурацию.</param>
+    /// <param name="progress">Объект для отчёта о прогрессе обработки.</param>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    /// <returns>Результат обработки в виде <see cref="ProcessingResult"/>.</returns>
+    public async Task<ProcessingResult> ProcessAsync(
+        DocumentProcessingRequest request, 
+        IProgress<ProcessingProgress>? progress = null, 
         CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        if (request == null)
+            throw new ArgumentNullException(nameof(request));
+        if (!File.Exists(request.InputFilePath))
+            return ProcessingResult.Failed($"Файл не найден: {request.InputFilePath}", _logger);
+        if (!CanProcess(request.InputFilePath))
+            return ProcessingResult.Failed($"Неподдерживаемый формат файла: {request.InputFilePath}", _logger);
+        
+        var logger = request.Configuration.Logger ?? _logger;
+        logger?.LogInformation("Начало асинхронной обработки документа: {FilePath}", request.InputFilePath);
+    
+        var tempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + Path.GetExtension(request.InputFilePath));
+        
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            progress?.Report(new ProcessingProgress
+            {
+                CurrentStep = 1,
+                TotalSteps = 5,
+                CurrentOperation = "Создание временной копии файла",
+                FileName = Path.GetFileName(request.InputFilePath)
+            });
+    
+            await Task.Run(() => File.Copy(request.InputFilePath, tempFilePath, true), cancellationToken);
+            
+            ProcessingResult result;
+            
+            progress?.Report(new ProcessingProgress
+            {
+                CurrentStep = 2,
+                TotalSteps = 5,
+                CurrentOperation = "Открытие документа",
+                FileName = Path.GetFileName(request.InputFilePath)
+            });
+    
+            using (var doc = await Task.Run(() => WordprocessingDocument.Open(tempFilePath, true), cancellationToken))
+            {
+                if (doc == null)
+                    return ProcessingResult.Failed($"Не удалось открыть документ: {request.InputFilePath}", logger);
+    
+                cancellationToken.ThrowIfCancellationRequested();
+    
+                var context = new WordOpenXmlDocumentContext
+                {
+                    Document = doc, 
+                    FilePath = tempFilePath
+                };
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 3,
+                    TotalSteps = 5,
+                    CurrentOperation = "Обработка содержимого документа",
+                    FileName = Path.GetFileName(request.InputFilePath)
+                });
+    
+                var contentHandler = new WordOpenXmlContentHandler(logger);
+                var headersFootersHandler = new WordOpenXmlHeadersFootersHandler(logger);
+                var propertiesHandler = new WordOpenXmlPropertiesHandler(logger);
+    
+                contentHandler
+                    .SetNext(headersFootersHandler)
+                    .SetNext(propertiesHandler);
+    
+                result = await Task.Run(() => contentHandler.Handle(context, request.Configuration), cancellationToken);
+                
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 4,
+                    TotalSteps = 5,
+                    CurrentOperation = "Сохранение изменений",
+                    FileName = Path.GetFileName(request.InputFilePath),
+                    MatchesFound = result.MatchesFound,
+                    MatchesProcessed = result.MatchesProcessed
+                });
+    
+                await Task.Run(() => doc.MainDocumentPart?.Document?.Save(), cancellationToken);
+            }
+    
+            if (request.ExportOptions.SaveModified)
+            {
+                await Task.Run(() => SaveProcessedDocument(request, tempFilePath, logger), cancellationToken);
+            }
+    
+            if (request.ExportOptions.ExportToPdf)
+            {
+                result.AddWarning("OpenXML процессор не поддерживает конвертацию в PDF. Используйте Interop процессор для экспорта в PDF.", logger);
+            }
+            
+            progress?.Report(new ProcessingProgress
+            {
+                CurrentStep = 5,
+                TotalSteps = 5,
+                CurrentOperation = "Обработка завершена",
+                FileName = Path.GetFileName(request.InputFilePath),
+                MatchesFound = result.MatchesFound,
+                MatchesProcessed = result.MatchesProcessed
+            });
+            
+            logger?.LogInformation("Асинхронная обработка завершена: найдено {Found}, обработано {Processed}",
+                result.MatchesFound, result.MatchesProcessed);
+    
+            return result;
+        }
+        catch (OperationCanceledException)
+        {
+            logger?.LogWarning("Обработка документа отменена пользователем");
+            return ProcessingResult.Failed("Обработка отменена", logger);
+        }
+        catch (Exception ex)
+        {
+            return ProcessingResult.Failed($"Ошибка асинхронной обработки документа: {ex.Message}", logger, ex);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tempFilePath))
+                {
+                    await Task.Run(() => File.Delete(tempFilePath));
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Не удалось удалить временный файл");
+            }
+        }
     }
     
     /// <summary>
@@ -241,10 +379,219 @@ public class WordOpenXmlDocumentProcessor : ITwoPassDocumentProcessor
         }
     }
 
-    public Task<ProcessingResult> ProcessTwoPassAsync(DocumentProcessingRequest request, TwoPassProcessingConfiguration twoPassConfig,
-        IProgress<ProcessingProgress>? progress = null, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Асинхронная версия двухпроходной обработки
+    /// </summary>
+    /// <param name="request">Запрос на обработку документа.</param>
+    /// <param name="twoPassConfig">Конфигурация двух проходов, включающая настройки для первого и второго прохода и стратегию извлечения кодов.</param>
+    /// <param name="progress">Объект для отчёта о прогрессе обработки.</param>
+    /// <param name="cancellationToken">Токен отмены операции.</param>
+    /// <returns>Результат обработки в виде <see cref="ProcessingResult"/>.</returns>
+    public async Task<ProcessingResult> ProcessTwoPassAsync(
+        DocumentProcessingRequest request, 
+        TwoPassProcessingConfiguration twoPassConfig, 
+        IProgress<ProcessingProgress>? progress = null, 
+        CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        if (request == null)
+            throw new ArgumentNullException(nameof(request));
+        if (!File.Exists(request.InputFilePath))
+            return ProcessingResult.Failed($"Файл не найден: {request.InputFilePath}");
+        
+        var logger = request.Configuration.Logger ?? _logger;
+        logger?.LogInformation("Начало асинхронной двухпроходной обработки документа: {FilePath}", request.InputFilePath);
+    
+        var tempFilePath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + Path.GetExtension(request.InputFilePath));
+        
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            
+            progress?.Report(new ProcessingProgress
+            {
+                CurrentStep = 1,
+                TotalSteps = 8,
+                CurrentOperation = "Создание временной копии файла",
+                FileName = Path.GetFileName(request.InputFilePath)
+            });
+    
+            await Task.Run(() => File.Copy(request.InputFilePath, tempFilePath, true), cancellationToken);
+            
+            ProcessingResult firstPassResult;
+            
+            logger?.LogInformation("=== ПЕРВЫЙ ПРОХОД ===");
+            
+            progress?.Report(new ProcessingProgress
+            {
+                CurrentStep = 2,
+                TotalSteps = 8,
+                CurrentOperation = "Первый проход: открытие документа",
+                FileName = Path.GetFileName(request.InputFilePath)
+            });
+    
+            using (var doc = await Task.Run(() => WordprocessingDocument.Open(tempFilePath, true), cancellationToken))
+            {
+                if (doc == null)
+                    return ProcessingResult.Failed($"Не удалось открыть документ: {request.InputFilePath}", logger);
+    
+                cancellationToken.ThrowIfCancellationRequested();
+    
+                var context = new WordOpenXmlDocumentContext
+                {
+                    Document = doc, 
+                    FilePath = tempFilePath
+                };
+    
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 3,
+                    TotalSteps = 8,
+                    CurrentOperation = "Первый проход: обработка документа",
+                    FileName = Path.GetFileName(request.InputFilePath)
+                });
+    
+                var contentHandler = new WordOpenXmlContentHandler(logger);
+                var headersFootersHandler = new WordOpenXmlHeadersFootersHandler(logger);
+                var propertiesHandler = new WordOpenXmlPropertiesHandler(logger);
+    
+                contentHandler
+                    .SetNext(headersFootersHandler)
+                    .SetNext(propertiesHandler);
+    
+                firstPassResult = await Task.Run(() => contentHandler.Handle(context, twoPassConfig.FirstPassConfiguration), cancellationToken);
+                
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 4,
+                    TotalSteps = 8,
+                    CurrentOperation = "Первый проход: сохранение изменений",
+                    FileName = Path.GetFileName(request.InputFilePath),
+                    MatchesFound = firstPassResult.MatchesFound,
+                    MatchesProcessed = firstPassResult.MatchesProcessed
+                });
+    
+                await Task.Run(() => doc.MainDocumentPart?.Document?.Save(), cancellationToken);
+            }
+    
+            var extractedCodes = twoPassConfig.CodeExtractionStrategy?.GetExtractedCodes() ?? new List<string>();
+            logger?.LogInformation("Извлечено кодов организаций: {Count}", extractedCodes.Count);
+            
+            if (extractedCodes.Count > 0)
+            {
+                logger?.LogInformation("=== ВТОРОЙ ПРОХОД ===");
+                
+                cancellationToken.ThrowIfCancellationRequested();
+                
+                progress?.Report(new ProcessingProgress
+                {
+                    CurrentStep = 5,
+                    TotalSteps = 8,
+                    CurrentOperation = "Второй проход: открытие документа",
+                    FileName = Path.GetFileName(request.InputFilePath),
+                    MatchesFound = firstPassResult.MatchesFound,
+                    MatchesProcessed = firstPassResult.MatchesProcessed
+                });
+    
+                using (var doc = await Task.Run(() => WordprocessingDocument.Open(tempFilePath, true), cancellationToken))
+                {
+                    var codeSearchStrategy = new OrganizationCodeSearchStrategy(extractedCodes);
+                    twoPassConfig.SecondPassConfiguration.SearchStrategies.Add(codeSearchStrategy);
+    
+                    var context = new WordOpenXmlDocumentContext
+                    {
+                        Document = doc, 
+                        FilePath = tempFilePath
+                    };
+    
+                    progress?.Report(new ProcessingProgress
+                    {
+                        CurrentStep = 6,
+                        TotalSteps = 8,
+                        CurrentOperation = "Второй проход: удаление кодов организаций",
+                        FileName = Path.GetFileName(request.InputFilePath),
+                        MatchesFound = firstPassResult.MatchesFound,
+                        MatchesProcessed = firstPassResult.MatchesProcessed
+                    });
+    
+                    var secondPassContentHandler = new WordOpenXmlContentHandler(logger);
+                    var secondPassHeadersFootersHandler = new WordOpenXmlHeadersFootersHandler(logger);
+    
+                    secondPassContentHandler
+                        .SetNext(secondPassHeadersFootersHandler);
+    
+                    var secondPassResult = await Task.Run(() => secondPassContentHandler.Handle(context, twoPassConfig.SecondPassConfiguration), cancellationToken);
+                    
+                    firstPassResult.MatchesFound += secondPassResult.MatchesFound;
+                    firstPassResult.MatchesProcessed += secondPassResult.MatchesProcessed;
+                    firstPassResult.Warnings.AddRange(secondPassResult.Warnings);
+                    firstPassResult.Metadata["CodesRemoved"] = extractedCodes.Count;
+                    
+                    cancellationToken.ThrowIfCancellationRequested();
+                    
+                    progress?.Report(new ProcessingProgress
+                    {
+                        CurrentStep = 7,
+                        TotalSteps = 8,
+                        CurrentOperation = "Второй проход: сохранение изменений",
+                        FileName = Path.GetFileName(request.InputFilePath),
+                        MatchesFound = firstPassResult.MatchesFound,
+                        MatchesProcessed = firstPassResult.MatchesProcessed
+                    });
+    
+                    await Task.Run(() => doc.MainDocumentPart?.Document?.Save(), cancellationToken);
+                }
+            }
+    
+            if (request.ExportOptions.SaveModified)
+            {
+                await Task.Run(() => SaveProcessedDocument(request, tempFilePath, logger), cancellationToken);
+            }
+    
+            if (request.ExportOptions.ExportToPdf)
+            {
+                firstPassResult.AddWarning("OpenXML процессор не поддерживает конвертацию в PDF.", logger);
+            }
+            
+            progress?.Report(new ProcessingProgress
+            {
+                CurrentStep = 8,
+                TotalSteps = 8,
+                CurrentOperation = "Двухпроходная обработка завершена",
+                FileName = Path.GetFileName(request.InputFilePath),
+                MatchesFound = firstPassResult.MatchesFound,
+                MatchesProcessed = firstPassResult.MatchesProcessed
+            });
+            
+            logger?.LogInformation("Асинхронная двухпроходная обработка завершена: найдено {Found}, обработано {Processed}", 
+                firstPassResult.MatchesFound, firstPassResult.MatchesProcessed);
+    
+            return firstPassResult;
+        }
+        catch (OperationCanceledException)
+        {
+            logger?.LogWarning("Двухпроходная обработка документа отменена пользователем");
+            return ProcessingResult.Failed("Обработка отменена", logger);
+        }
+        catch (Exception ex)
+        {
+            return ProcessingResult.Failed($"Ошибка асинхронной двухпроходной обработки: {ex.Message}", logger, ex);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(tempFilePath))
+                {
+                    await Task.Run(() => File.Delete(tempFilePath));
+                }
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Не удалось удалить временный файл");
+            }
+        }
     }
 
     /// <summary>
